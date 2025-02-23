@@ -44,7 +44,6 @@ Shader "Unlit/MyDither3D"
             {
                 float4 positionHCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
-                float4 screenPos : TEXCOORD1;
             };
 
             sampler2D _MainTex;
@@ -60,7 +59,7 @@ Shader "Unlit/MyDither3D"
             float _StretchSmoothness;
             CBUFFER_END
 
-            half4 MyGetDither3D(float2 uv_DitherTex, float4 screenPos, float2 dx, float2 dy, half brightness)
+            half4 MyGetDither3D(float2 uv_DitherTex, float2 dx, float2 dy, half brightness)
             {
                 float xResolution = _DitherTex_TexelSize.z; // widthを取得(heightも同じだとする)
                 float inverseXResolution = _DitherTex_TexelSize.x; // 1/widthされた値
@@ -134,14 +133,14 @@ Shader "Unlit/MyDither3D"
                 return half4(bw, frac(uv.x), frac(uv.y), subLayer);
             }
 
-            half4 MyGetDither3DColor(float2 uv_DitherTex, float4 screenPos, half4 color)
+            half4 MyGetDither3DColor(float2 uv_DitherTex, half4 color)
             {
                 // UV座標の変化率を取得
                 float2 dx = ddx(uv_DitherTex);
                 float2 dy = ddy(uv_DitherTex);
 
                 // Brightnessはモノクロに変換して代入
-                half4 dither = MyGetDither3D(uv_DitherTex, screenPos, dx, dy, convertMonochrome(color.rgb));
+                half4 dither = MyGetDither3D(uv_DitherTex, dx, dy, convertMonochrome(color.rgb));
 
                 color.rgb = dither.x;
 
@@ -153,14 +152,13 @@ Shader "Unlit/MyDither3D"
                 Varyings o;
                 o.positionHCS = TransformObjectToHClip(v.positionOS.xyz);
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-                o.screenPos = ComputeScreenPos(o.positionHCS);
                 return o;
             }
 
             float4 frag(Varyings i) : SV_Target
             {
                 float4 col = tex2D(_MainTex, i.uv);
-                col.rgb = MyGetDither3DColor(i.uv, i.screenPos, col);
+                col.rgb = MyGetDither3DColor(i.uv, col);
                 return col;
             }
             ENDHLSL
